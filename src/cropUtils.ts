@@ -19,8 +19,8 @@ export default async function getCroppedImg(
     return '';
   }
 
-  // set canvas size to match the crop, but limit max dimensions
-  const MAX_DIMENSION = 1200;
+  // set canvas size to match the crop, but limit max dimensions for URL sharing
+  const MAX_DIMENSION = 800; // Reduced from 1200
   let targetWidth = pixelCrop.width;
   let targetHeight = pixelCrop.height;
 
@@ -46,6 +46,6 @@ export default async function getCroppedImg(
     targetHeight
   );
 
-  // return as compressed jpeg
-  return canvas.toDataURL('image/jpeg', 0.7);
+  // return as compressed jpeg with lower quality for smaller base64
+  return canvas.toDataURL('image/jpeg', 0.5); // Reduced from 0.7
 }

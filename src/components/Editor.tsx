@@ -72,19 +72,41 @@ export const Editor: React.FC<EditorProps> = ({ state, onChange, onShare, onRese
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert("O áudio deve ter no máximo 5MB para garantir que o link possa ser compartilhado.");
+    // Limit to 2MB for better compatibility without database
+    const maxSize = 2 * 1024 * 1024;
+    if (file.size > maxSize) {
+      alert("Para que o link funcione sem banco de dados, o áudio deve ter no máximo 2MB. Tente um arquivo menor ou use um link direto.");
       return;
     }
 
-    if (file.type !== 'audio/mpeg' && !file.name.endsWith('.mp3')) {
-      alert("Apenas arquivos MP3 são suportados.");
+    if (!file.type.startsWith('audio/')) {
+      alert("Por favor, selecione um arquivo de áudio válido.");
       return;
     }
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      handleChange('musicUrl', reader.result as string);
+      const base64 = reader.result as string;
+      
+      // Check duration using AudioContext
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioData = base64.split(',')[1];
+      const binaryData = atob(audioData);
+      const arrayBuffer = new ArrayBuffer(binaryData.length);
+      const view = new Uint8Array(arrayBuffer);
+      for (let i = 0; i < binaryData.length; i++) {
+        view[i] = binaryData.charCodeAt(i);
+      }
+
+      audioCtx.decodeAudioData(arrayBuffer, (buffer) => {
+        if (buffer.duration > 60) {
+          alert("Aviso: Áudios com mais de 60 segundos podem tornar o link muito grande para alguns dispositivos. Recomendamos clipes curtos.");
+        }
+        handleChange('musicUrl', base64);
+      }, (err) => {
+        console.error("Error decoding audio", err);
+        handleChange('musicUrl', base64); // Still set it if decoding fails
+      });
     };
     reader.readAsDataURL(file);
   };
@@ -303,6 +325,9 @@ export const Editor: React.FC<EditorProps> = ({ state, onChange, onShare, onRese
                       className="hidden"
                     />
                   </label>
+                  <p className="text-[10px] text-slate-400 italic mt-1">
+                    * Uploads limitados a 2MB para compatibilidade sem banco de dados.
+                  </p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-slate-700 mb-1 block">Ou URL do MP3</label>
