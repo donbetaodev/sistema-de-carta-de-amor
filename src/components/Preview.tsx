@@ -76,39 +76,9 @@ export const Preview: React.FC<PreviewProps> = ({ state, isEditing = false }) =>
     setNoClickCount(prev => prev + 1);
   };
 
-  if (!isOpened && !isEditing) {
-    return (
-      <div 
-        className="min-h-screen w-full flex flex-col items-center justify-center p-4 transition-colors duration-700"
-        style={{ backgroundColor: state.backgroundColor }}
-      >
-        <motion.div 
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="text-center space-y-8"
-        >
-          <div className="envelope-wrapper" onClick={handleOpenEnvelope}>
-            <div className={cn("envelope", isOpened && "open")}>
-              <div className="envelope-flap" />
-              <div className="envelope-front" />
-              <div className="letter-preview" />
-            </div>
-          </div>
-          <motion.p 
-            animate={{ opacity: [0.4, 1, 0.4] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="text-rose-600 font-bold uppercase tracking-widest text-sm"
-          >
-            Toque para abrir sua carta
-          </motion.p>
-        </motion.div>
-      </div>
-    );
-  }
-
   return (
     <div 
-      className="relative min-h-screen w-full flex flex-col items-center justify-start p-4 md:p-8 pt-20 pb-32 transition-colors duration-700"
+      className="relative min-h-screen w-full flex flex-col items-center justify-start transition-colors duration-700 overflow-x-hidden"
       style={{ backgroundColor: state.backgroundColor, color: state.textColor }}
     >
       {state.musicEnabled && (
@@ -123,67 +93,103 @@ export const Preview: React.FC<PreviewProps> = ({ state, isEditing = false }) =>
           </>
       )}
 
-      {/* Background Animations */}
-      <AnimatePresence>
-        {(state.animation === 'hearts' && (showLetter || isEditing)) && (
-          <div className="absolute inset-0 pointer-events-none">
-            {[...Array(20)].map((_, i) => (
-              <motion.div
-                key={i}
-                initial={{ y: '110vh', x: `${Math.random() * 100}vw`, opacity: 0, scale: 0.5 }}
-                animate={{ 
-                  y: '-10vh', 
-                  opacity: [0, 1, 1, 0],
-                  rotate: Math.random() * 360,
-                  scale: [0.5, 1, 0.8]
-                }}
-                transition={{ 
-                  duration: 5 + Math.random() * 5, 
-                  repeat: Infinity, 
-                  delay: Math.random() * 5,
-                  ease: "linear"
-                }}
-                className="absolute text-rose-400/30"
-              >
-                <Heart size={24 + Math.random() * 40} fill="currentColor" />
-              </motion.div>
-            ))}
-          </div>
-        )}
-        {(state.animation === 'sparkles' && (showLetter || isEditing)) && (
-          <div className="absolute inset-0 pointer-events-none">
-            {[...Array(30)].map((_, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ 
-                  opacity: [0, 1, 0],
-                  scale: [0, 1.2, 0],
-                  x: `${Math.random() * 100}vw`,
-                  y: `${Math.random() * 100}vh`
-                }}
-                transition={{ 
-                  duration: 2 + Math.random() * 3, 
-                  repeat: Infinity, 
-                  delay: Math.random() * 2 
-                }}
-                className="absolute text-yellow-400/40"
-              >
-                <Stars size={16 + Math.random() * 20} fill="currentColor" />
-              </motion.div>
-            ))}
-          </div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {(showLetter || isEditing) && (
-          <motion.div
-            initial={{ opacity: 0, y: 100, scale: 0.8 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ type: 'spring', damping: 20, stiffness: 100 }}
-            className="z-10 max-w-5xl w-full paper-card p-12 md:p-24 text-center space-y-16 shadow-2xl"
+      <AnimatePresence mode="wait">
+        {!showLetter && !isEditing ? (
+          <motion.div 
+            key="envelope"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, y: -100, transition: { duration: 0.8 } }}
+            className="min-h-screen w-full flex flex-col items-center justify-center p-4"
           >
+            <div className="envelope-wrapper" onClick={handleOpenEnvelope}>
+              <div className={cn("envelope", isOpened && "open")}>
+                <div className="envelope-flap" />
+                <div className="envelope-front" />
+                <div className="letter-preview" />
+                <div className="wax-seal">
+                  <Heart size={20} fill="currentColor" />
+                </div>
+              </div>
+            </div>
+            <motion.p 
+              animate={{ opacity: [0.4, 1, 0.4] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="mt-12 text-rose-600 font-bold uppercase tracking-widest text-sm text-center"
+            >
+              Toque para abrir sua carta
+            </motion.p>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="content"
+            className="w-full flex flex-col items-center justify-start p-4 md:p-8 pt-20 pb-32"
+          >
+            {/* Background Animations */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden">
+              <AnimatePresence>
+                {(state.animation === 'hearts') && (
+                  <div className="absolute inset-0">
+                    {[...Array(20)].map((_, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ y: '110vh', x: `${Math.random() * 100}vw`, opacity: 0, scale: 0.5 }}
+                        animate={{ 
+                          y: '-10vh', 
+                          opacity: [0, 1, 1, 0],
+                          rotate: Math.random() * 360,
+                          scale: [0.5, 1, 0.8]
+                        }}
+                        transition={{ 
+                          duration: 5 + Math.random() * 5, 
+                          repeat: Infinity, 
+                          delay: Math.random() * 5,
+                          ease: "linear"
+                        }}
+                        className="absolute text-rose-400/30"
+                      >
+                        <Heart size={24 + Math.random() * 40} fill="currentColor" />
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+                {(state.animation === 'sparkles') && (
+                  <div className="absolute inset-0">
+                    {[...Array(30)].map((_, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, scale: 0 }}
+                        animate={{ 
+                          opacity: [0, 1, 0],
+                          scale: [0, 1.2, 0],
+                          x: `${Math.random() * 100}vw`,
+                          y: `${Math.random() * 100}vh`
+                        }}
+                        transition={{ 
+                          duration: 2 + Math.random() * 3, 
+                          repeat: Infinity, 
+                          delay: Math.random() * 2 
+                        }}
+                        className="absolute text-yellow-400/40"
+                      >
+                        <Stars size={16 + Math.random() * 20} fill="currentColor" />
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 50, scale: 0.95, filter: 'blur(10px)' }}
+              animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+              transition={{ 
+                duration: 1.2, 
+                delay: 0.2,
+                ease: [0.22, 1, 0.36, 1] 
+              }}
+              className="z-10 max-w-5xl w-full paper-card p-12 md:p-24 text-center space-y-16 shadow-2xl relative"
+            >
         {!accepted ? (
           <>
             {/* Image Gallery - Larger and more dynamic */}
@@ -357,6 +363,7 @@ export const Preview: React.FC<PreviewProps> = ({ state, isEditing = false }) =>
             </motion.div>
           </motion.div>
         )}
+          </motion.div>
         </motion.div>
       )}
       </AnimatePresence>
