@@ -85,13 +85,7 @@ export default function App() {
       return `${window.location.origin}${window.location.pathname}?id=${supabaseId}`;
     }
     const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(state));
-    const url = `${window.location.origin}${window.location.pathname}?d=${compressed}`;
-    
-    if (url.length > 8000) {
-      console.warn("URL is very long. Sharing might fail without Supabase.");
-    }
-    
-    return url;
+    return `${window.location.origin}${window.location.pathname}?d=${compressed}`;
   };
 
   const handleShare = async () => {
@@ -101,7 +95,15 @@ export default function App() {
       const url = (import.meta as any).env.VITE_SUPABASE_URL;
       const isConfigured = url && !url.includes('placeholder');
       
+      const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(state));
+      const fallbackUrl = `${window.location.origin}${window.location.pathname}?d=${compressed}`;
+
       if (!isConfigured) {
+        if (fallbackUrl.length > 2000) {
+          alert("O conteúdo é muito grande para ser compartilhado via link direto (devido às imagens ou música). Você PRECISA configurar o Supabase para gerar links curtos e estáveis.");
+          setIsSaving(false);
+          return;
+        }
         setShowShareModal(true);
         return;
       }
