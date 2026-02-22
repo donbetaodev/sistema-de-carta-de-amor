@@ -19,8 +19,13 @@ export default function App() {
   // Load state from URL or Supabase on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const data = params.get('d');
     const id = params.get('id');
+    
+    // Try to get data from search param first, then from hash
+    let data = params.get('d');
+    if (!data && window.location.hash.startsWith('#d=')) {
+      data = window.location.hash.substring(3);
+    }
 
     const loadFromSupabase = async (id: string) => {
       try {
@@ -85,7 +90,8 @@ export default function App() {
       return `${window.location.origin}${window.location.pathname}?id=${supabaseId}`;
     }
     const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(state));
-    return `${window.location.origin}${window.location.pathname}?d=${compressed}`;
+    // Use hash (#) instead of search (?) to avoid URI_TOO_LONG server errors
+    return `${window.location.origin}${window.location.pathname}#d=${compressed}`;
   };
 
   const handleShare = async () => {
@@ -96,13 +102,13 @@ export default function App() {
       const isConfigured = url && !url.includes('placeholder');
       
       const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(state));
-      const fallbackUrl = `${window.location.origin}${window.location.pathname}?d=${compressed}`;
+      const fallbackUrl = `${window.location.origin}${window.location.pathname}#d=${compressed}`;
 
       if (!isConfigured) {
-        if (fallbackUrl.length > 2000) {
-          alert("O conteúdo é muito grande para ser compartilhado via link direto (devido às imagens ou música). Você PRECISA configurar o Supabase para gerar links curtos e estáveis.");
-          setIsSaving(false);
-          return;
+        // Hash URLs can be much longer because they aren't sent to the server
+        // We still warn if it's exceptionally large (e.g. > 100KB)
+        if (fallbackUrl.length > 100000) {
+          alert("O conteúdo é extremamente grande. Tente usar imagens menores para garantir que o link funcione em todos os dispositivos.");
         }
         setShowShareModal(true);
         return;
