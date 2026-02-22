@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Heart, Edit3, Eye, Share2, Check, Copy } from 'lucide-react';
 import LZString from 'lz-string';
+import { supabase } from './lib/supabase';
 import { DeclarationState, DEFAULT_STATE } from './types';
 import { Preview } from './components/Preview';
 import { Editor } from './components/Editor';
@@ -12,12 +13,59 @@ export default function App() {
   const [isSharedView, setIsSharedView] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [supabaseId, setSupabaseId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Load state from URL on mount
+  // Load state from URL or Supabase on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const data = params.get('d');
-    if (data) {
+    const id = params.get('id');
+
+    const loadFromSupabase = async (id: string) => {
+      try {
+        const { data, error } = await supabase
+          .from('declarations')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (error) {
+          console.error("Supabase load error:", error.message, error.details);
+          return;
+        }
+
+        if (data) {
+          const mappedState: DeclarationState = {
+            title: data.title,
+            subtitle: data.subtitle,
+            message: data.message,
+            footer: data.footer,
+            images: data.images,
+            musicEnabled: data.music_enabled,
+            musicUrl: data.music_url,
+            backgroundColor: data.background_color,
+            textColor: data.text_color,
+            animation: data.animation,
+            occasion: data.occasion,
+            buttonTextYes: data.button_text_yes,
+            buttonTextNo: data.button_text_no,
+            startDate: data.start_date,
+            showCountdown: data.show_countdown,
+          };
+          setState(mappedState);
+          setSupabaseId(id);
+          setIsEditing(false);
+          setIsSharedView(true);
+        }
+      } catch (e) {
+        console.error("Unexpected error loading from Supabase:", e);
+      }
+    };
+
+    if (id) {
+      loadFromSupabase(id);
+    } else if (data) {
       try {
         const decompressed = LZString.decompressFromEncodedURIComponent(data);
         if (decompressed) {
@@ -33,12 +81,60 @@ export default function App() {
   }, []);
 
   const getShareUrl = () => {
+    if (supabaseId) {
+      return `${window.location.origin}${window.location.pathname}?id=${supabaseId}`;
+    }
     const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(state));
     return `${window.location.origin}${window.location.pathname}?d=${compressed}`;
   };
 
-  const handleShare = () => {
-    setShowShareModal(true);
+  const handleShare = async () => {
+    setIsSaving(true);
+    try {
+      // Check if Supabase is configured
+      const url = (import.meta as any).env.VITE_SUPABASE_URL;
+      const isConfigured = url && !url.includes('placeholder');
+      
+      if (!isConfigured) {
+        console.warn("Supabase not configured, using URL compression fallback.");
+        setShowShareModal(true);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('declarations')
+        .insert([{
+          title: state.title,
+          subtitle: state.subtitle,
+          message: state.message,
+          footer: state.footer,
+          images: state.images,
+          music_enabled: state.musicEnabled,
+          music_url: state.musicUrl,
+          background_color: state.backgroundColor,
+          text_color: state.textColor,
+          animation: state.animation,
+          occasion: state.occasion,
+          button_text_yes: state.buttonTextYes,
+          button_text_no: state.buttonTextNo,
+          start_date: state.startDate,
+          show_countdown: state.showCountdown,
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Supabase save error:", error.message, error.details);
+        // We don't block the modal, it will just use the fallback URL
+      } else if (data) {
+        setSupabaseId(data.id);
+      }
+    } catch (e) {
+      console.error("Unexpected error saving to Supabase:", e);
+    } finally {
+      setIsSaving(false);
+      setShowShareModal(true);
+    }
   };
 
   const copyToClipboard = () => {
@@ -50,6 +146,7 @@ export default function App() {
   const handleReset = () => {
     if (confirm("Tem certeza que deseja resetar todas as alterações?")) {
       setState(DEFAULT_STATE);
+      setSupabaseId(null);
     }
   };
 
@@ -99,6 +196,7 @@ export default function App() {
               onChange={setState} 
               onShare={handleShare} 
               onReset={handleReset}
+              isSaving={isSaving}
             />
           </motion.aside>
         )}
@@ -125,21 +223,27 @@ export default function App() {
                 <div className="inline-flex p-3 bg-rose-100 text-rose-600 rounded-2xl mb-2">
                   <Share2 size={24} />
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900">Tudo pronto!</h3>
-                <p className="text-slate-500">Copie o link abaixo e envie para o seu amor.</p>
+                <h3 className="text-2xl font-bold text-slate-900">
+                  {isSaving ? 'Salvando...' : 'Tudo pronto!'}
+                </h3>
+                <p className="text-slate-500">
+                  {isSaving ? 'Estamos preparando seu link especial...' : 'Copie o link abaixo e envie para o seu amor.'}
+                </p>
               </div>
 
-              <div className="relative group">
-                <div className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 pr-12 text-sm text-slate-600 break-all line-clamp-3">
-                  {getShareUrl()}
+              {!isSaving && (
+                <div className="relative group">
+                  <div className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 pr-12 text-sm text-slate-600 break-all line-clamp-3">
+                    {getShareUrl()}
+                  </div>
+                  <button
+                    onClick={copyToClipboard}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-rose-600 transition-colors"
+                  >
+                    {copied ? <Check size={20} className="text-green-500" /> : <Copy size={20} />}
+                  </button>
                 </div>
-                <button
-                  onClick={copyToClipboard}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-rose-600 transition-colors"
-                >
-                  {copied ? <Check size={20} className="text-green-500" /> : <Copy size={20} />}
-                </button>
-              </div>
+              )}
 
               <button
                 onClick={() => setShowShareModal(false)}

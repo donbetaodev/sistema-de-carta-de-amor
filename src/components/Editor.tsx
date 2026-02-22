@@ -9,9 +9,10 @@ interface EditorProps {
   onChange: (newState: DeclarationState) => void;
   onShare: () => void;
   onReset: () => void;
+  isSaving?: boolean;
 }
 
-export const Editor: React.FC<EditorProps> = ({ state, onChange, onShare, onReset }) => {
+export const Editor: React.FC<EditorProps> = ({ state, onChange, onShare, onReset, isSaving = false }) => {
   const [isAdjusting, setIsAdjusting] = useState<number | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -105,9 +106,10 @@ export const Editor: React.FC<EditorProps> = ({ state, onChange, onShare, onRese
           </button>
           <button
             onClick={onShare}
-            className="bg-rose-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-rose-700 transition-colors shadow-sm"
+            disabled={isSaving}
+            className="bg-rose-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-rose-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            Compartilhar
+            {isSaving ? 'Salvando...' : 'Compartilhar'}
           </button>
         </div>
       </div>
