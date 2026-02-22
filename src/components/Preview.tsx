@@ -41,14 +41,35 @@ export const Preview: React.FC<PreviewProps> = ({ state, isEditing = false }) =>
   }, [state.startDate]);
 
   useEffect(() => {
-    if (audioRef.current) {
-        if (state.musicEnabled && !isMuted && (isOpened || isEditing)) {
-            audioRef.current.play().catch(e => console.log("Autoplay blocked", e));
-        } else {
-            audioRef.current.pause();
-        }
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleTimeUpdate = () => {
+      const endTime = state.musicStartTime + state.musicDuration;
+      if (audio.currentTime >= endTime) {
+        audio.currentTime = state.musicStartTime;
+      }
+      if (audio.currentTime < state.musicStartTime) {
+        audio.currentTime = state.musicStartTime;
+      }
+    };
+
+    if (state.musicEnabled && !isMuted && (isOpened || isEditing)) {
+      // Only set currentTime if it's far outside the range to avoid stuttering on state updates
+      if (audio.currentTime < state.musicStartTime || audio.currentTime > state.musicStartTime + state.musicDuration) {
+        audio.currentTime = state.musicStartTime;
+      }
+      audio.play().catch(e => console.log("Autoplay blocked", e));
+      audio.addEventListener('timeupdate', handleTimeUpdate);
+    } else {
+      audio.pause();
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
     }
-  }, [state.musicEnabled, state.musicUrl, isMuted, isOpened, isEditing]);
+
+    return () => {
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+    };
+  }, [state.musicEnabled, state.musicUrl, state.musicStartTime, state.musicDuration, isMuted, isOpened, isEditing]);
 
   const handleOpenEnvelope = () => {
     if (isOpened) return;

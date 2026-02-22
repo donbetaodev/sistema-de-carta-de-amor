@@ -57,6 +57,8 @@ export default function App() {
             buttonTextNo: data.button_text_no,
             startDate: data.start_date,
             showCountdown: data.show_countdown,
+            musicStartTime: data.music_start_time || 0,
+            musicDuration: data.music_duration || 60,
           };
           setState(mappedState);
           setSupabaseId(id);
@@ -142,6 +144,8 @@ export default function App() {
           button_text_no: state.buttonTextNo,
           start_date: state.startDate,
           show_countdown: state.showCountdown,
+          music_start_time: state.musicStartTime,
+          music_duration: state.musicDuration,
         }])
         .select()
         .single();

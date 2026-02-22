@@ -17,6 +17,8 @@ export interface DeclarationState {
   startDate: string;
   musicUrl: string;
   musicEnabled: boolean;
+  musicStartTime: number;
+  musicDuration: number;
 }
 
 export const DEFAULT_STATE: DeclarationState = {
@@ -41,4 +43,6 @@ export const DEFAULT_STATE: DeclarationState = {
   startDate: new Date().toISOString().split('T')[0],
   musicUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
   musicEnabled: false,
+  musicStartTime: 0,
+  musicDuration: 60,
 };

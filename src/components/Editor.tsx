@@ -17,6 +17,16 @@ export const Editor: React.FC<EditorProps> = ({ state, onChange, onShare, onRese
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [audioDuration, setAudioDuration] = useState<number>(0);
+
+  React.useEffect(() => {
+    if (state.musicUrl) {
+      const audio = new Audio(state.musicUrl);
+      audio.addEventListener('loadedmetadata', () => {
+        setAudioDuration(audio.duration);
+      });
+    }
+  }, [state.musicUrl]);
 
   const handleChange = (key: keyof DeclarationState, value: any) => {
     onChange({ ...state, [key]: value });
@@ -99,6 +109,7 @@ export const Editor: React.FC<EditorProps> = ({ state, onChange, onShare, onRese
       }
 
       audioCtx.decodeAudioData(arrayBuffer, (buffer) => {
+        setAudioDuration(buffer.duration);
         if (buffer.duration > 60) {
           alert("Aviso: Áudios com mais de 60 segundos podem tornar o link muito grande para alguns dispositivos. Recomendamos clipes curtos.");
         }
@@ -339,6 +350,50 @@ export const Editor: React.FC<EditorProps> = ({ state, onChange, onShare, onRese
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-rose-500 outline-none text-sm"
                   />
                 </div>
+
+                {audioDuration > 0 && (
+                  <div className="space-y-4 pt-2 border-t border-slate-100">
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs font-bold text-slate-500 uppercase">
+                        <span>Início: {state.musicStartTime.toFixed(1)}s</span>
+                        <span>Duração: {state.musicDuration.toFixed(1)}s</span>
+                      </div>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-[10px] text-slate-400 uppercase font-bold mb-1 block">Ponto de Início</label>
+                          <input
+                            type="range"
+                            min="0"
+                            max={Math.max(0, audioDuration - 1)}
+                            step="0.1"
+                            value={state.musicStartTime}
+                            onChange={(e) => {
+                              const start = parseFloat(e.target.value);
+                              onChange({
+                                ...state,
+                                musicStartTime: start,
+                                musicDuration: Math.min(state.musicDuration, audioDuration - start)
+                              });
+                            }}
+                            className="w-full accent-rose-600"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-400 uppercase font-bold mb-1 block">Duração (Máx 60s)</label>
+                          <input
+                            type="range"
+                            min="1"
+                            max={Math.min(60, audioDuration - state.musicStartTime)}
+                            step="0.1"
+                            value={state.musicDuration}
+                            onChange={(e) => handleChange('musicDuration', parseFloat(e.target.value))}
+                            className="w-full accent-rose-600"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
