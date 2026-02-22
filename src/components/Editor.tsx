@@ -72,8 +72,8 @@ export const Editor: React.FC<EditorProps> = ({ state, onChange, onShare, onRese
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 10 * 1024 * 1024) {
-      alert("O áudio deve ter no máximo 10MB.");
+    if (file.size > 5 * 1024 * 1024) {
+      alert("O áudio deve ter no máximo 5MB para garantir que o link possa ser compartilhado.");
       return;
     }
 

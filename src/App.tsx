@@ -85,7 +85,13 @@ export default function App() {
       return `${window.location.origin}${window.location.pathname}?id=${supabaseId}`;
     }
     const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(state));
-    return `${window.location.origin}${window.location.pathname}?d=${compressed}`;
+    const url = `${window.location.origin}${window.location.pathname}?d=${compressed}`;
+    
+    if (url.length > 8000) {
+      console.warn("URL is very long. Sharing might fail without Supabase.");
+    }
+    
+    return url;
   };
 
   const handleShare = async () => {
@@ -96,8 +102,17 @@ export default function App() {
       const isConfigured = url && !url.includes('placeholder');
       
       if (!isConfigured) {
-        console.warn("Supabase not configured, using URL compression fallback.");
         setShowShareModal(true);
+        return;
+      }
+
+      // Calculate approximate size
+      const stateString = JSON.stringify(state);
+      const sizeInMB = (stateString.length * 2) / (1024 * 1024); // UTF-16 approximate
+      
+      if (sizeInMB > 15) {
+        alert("O conteúdo é muito grande para ser compartilhado (limite de 15MB). Tente usar imagens menores ou um áudio mais curto.");
+        setIsSaving(false);
         return;
       }
 
@@ -125,12 +140,13 @@ export default function App() {
 
       if (error) {
         console.error("Supabase save error:", error.message, error.details);
-        // We don't block the modal, it will just use the fallback URL
+        alert(`Erro ao salvar no banco de dados: ${error.message}. O link gerado pode não funcionar se contiver muitas imagens.`);
       } else if (data) {
         setSupabaseId(data.id);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("Unexpected error saving to Supabase:", e);
+      alert("Ocorreu um erro inesperado ao tentar salvar. Verifique sua conexão.");
     } finally {
       setIsSaving(false);
       setShowShareModal(true);
@@ -232,16 +248,24 @@ export default function App() {
               </div>
 
               {!isSaving && (
-                <div className="relative group">
-                  <div className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 pr-12 text-sm text-slate-600 break-all line-clamp-3">
-                    {getShareUrl()}
+                <div className="space-y-4">
+                  <div className="relative group">
+                    <div className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 pr-12 text-sm text-slate-600 break-all line-clamp-3">
+                      {getShareUrl()}
+                    </div>
+                    <button
+                      onClick={copyToClipboard}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-rose-600 transition-colors"
+                    >
+                      {copied ? <Check size={20} className="text-green-500" /> : <Copy size={20} />}
+                    </button>
                   </div>
-                  <button
-                    onClick={copyToClipboard}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-rose-600 transition-colors"
-                  >
-                    {copied ? <Check size={20} className="text-green-500" /> : <Copy size={20} />}
-                  </button>
+                  
+                  {!supabaseId && getShareUrl().length > 8000 && (
+                    <p className="text-xs text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-100">
+                      <strong>Aviso:</strong> O link está muito grande devido às imagens/música e pode não abrir corretamente. Tente reduzir o tamanho dos arquivos ou configurar o Supabase.
+                    </p>
+                  )}
                 </div>
               )}
 

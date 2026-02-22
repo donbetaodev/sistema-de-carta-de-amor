@@ -19,9 +19,19 @@ export default async function getCroppedImg(
     return '';
   }
 
-  // set canvas size to match the crop
-  canvas.width = pixelCrop.width;
-  canvas.height = pixelCrop.height;
+  // set canvas size to match the crop, but limit max dimensions
+  const MAX_DIMENSION = 1200;
+  let targetWidth = pixelCrop.width;
+  let targetHeight = pixelCrop.height;
+
+  if (targetWidth > MAX_DIMENSION || targetHeight > MAX_DIMENSION) {
+    const ratio = Math.min(MAX_DIMENSION / targetWidth, MAX_DIMENSION / targetHeight);
+    targetWidth = Math.round(targetWidth * ratio);
+    targetHeight = Math.round(targetHeight * ratio);
+  }
+
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
 
   // draw cropped image onto canvas
   ctx.drawImage(
@@ -32,10 +42,10 @@ export default async function getCroppedImg(
     pixelCrop.height,
     0,
     0,
-    pixelCrop.width,
-    pixelCrop.height
+    targetWidth,
+    targetHeight
   );
 
-  // return as base64
-  return canvas.toDataURL('image/jpeg');
+  // return as compressed jpeg
+  return canvas.toDataURL('image/jpeg', 0.7);
 }
